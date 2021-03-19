@@ -76,11 +76,11 @@ def main_gaussian_dpmm():
 	Nsamples = 1000
 	T = 10
 	t = np.arange(T+1)
-	y = np.zeros(T+1)
 	rng_key = random.PRNGKey(0)
 	repeat = 5
 
 	for Npoints in (200, 400, 500):
+		y = np.zeros(T+1)
 		for _ in range(repeat):
 			data = sample_data_miller(rng_key, Npoints)
 			y += sample_posterior(rng_key, gaussian_DPMM, data, Nsamples, T=T, alpha=1,
@@ -94,5 +94,70 @@ def main_gaussian_dpmm():
 	plt.legend()
 	plt.show()
 
+def sample_data_poisson(rng_key, N: int):
+	data = np.hstack((
+		Poisson(4).sample(rng_key, (int(.45 * N),)),
+		Poisson(6).sample(rng_key, (int(.3 * N),)),
+		Poisson(8).sample(rng_key, (N - int(.3 * N) - int(.45 * N),))))
+	return data
+
+def poisson_DPMM(data, alpha: float = 1, T: int = 10):
+	with numpyro.plate("beta_plate", T-1):
+		beta = numpyro.sample("beta", Beta(1, alpha))
+
+	with numpyro.plate("component_plate", T):
+		rate = numpyro.sample("rate", Gamma(1, 1))
+
+	with numpyro.plate("data", data.shape[0]):
+		z = numpyro.sample("z", Categorical(mix_weights(beta)))
+		numpyro.sample("obs", Poisson(rate[z]), obs=data)
+
+def make_poisson_dpmm_gibbs_fn(data):
+	def gibbs_fn(rng_key, gibbs_sites, hmc_sites):
+		rate = hmc_sites['rate']
+		beta = hmc_sites['beta']
+
+		T, = rate.shape
+		assert beta.shape == (T-1,)
+
+		N, = data.shape
+
+		log_probs = Poisson(rate).log_prob(data[:, None])
+		assert log_probs.shape == (N, T)
+
+		log_weights = jnp.log(mix_weights(beta))
+		assert log_weights.shape == (T,)
+
+		logits = log_probs + log_weights[None,:]
+		assert logits.shape == (N, T)
+
+		z = CategoricalLogits(logits).sample(rng_key)
+		assert z.shape == (N,)
+	
+		return {'z':z}
+	return gibbs_fn
+
+def main_poisson_dpmm():
+	Nsamples = 1000
+	T = 10
+	t = np.arange(T+1)
+	rng_key = random.PRNGKey(0)
+	repeat = 1
+
+	for Npoints in (200, 400, 500):
+		y = np.zeros(T+1)
+		for _ in range(repeat):
+			data = sample_data_poisson(rng_key, Npoints)
+			y += sample_posterior(rng_key, poisson_DPMM, data, Nsamples, T=T, alpha=1,
+				# Uncomment the line below to use HMCGibbs
+					gibbs_fn=make_poisson_dpmm_gibbs_fn(data), gibbs_sites=['z'],
+				)
+		y /= repeat
+		plt.plot(t, y, label=f"N={Npoints}")
+		plt.scatter(t, y)
+
+	plt.legend()
+	plt.show()
+
 if __name__ == '__main__':
-	main_gaussian_dpmm()
+	main_poisson_dpmm()
