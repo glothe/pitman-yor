@@ -7,11 +7,11 @@ import matplotlib.pyplot as plt
 
 from sampler import sample_posterior
 from gaussian import gaussian_DPMM, make_gaussian_DPMM_gibbs_fn
-from poisson import poisson_DPMM, make_poisson_DPMM_gibbs_fn
+from poisson import poisson_DPMM, make_poisson_DPMM_gibbs_fn, explicit_upper_bound
 from utils import compute_PY_prior
 
 
-def make_synthetic_experiment(sample_data , model, make_gibbs_fn):
+def make_synthetic_experiment(sample_data , model, make_gibbs_fn, explict_ub=None):
 	"""
 	Template for small synthetic experiments
 	"""
@@ -27,16 +27,26 @@ def make_synthetic_experiment(sample_data , model, make_gibbs_fn):
 	priors = compute_PY_prior(alpha, sigma, n_values)
 	for Npoints, prior in zip(n_values, priors):
 		y = np.zeros(T+1)
+		ub = np.zeros(T+1)
 		for _ in range(repeat):
 			data = sample_data(rng_key, Npoints)
 			y += sample_posterior(rng_key, model, data, Nsamples, T=T, alpha=1,
 				# Uncomment the line below to use HMCGibbs
 				#	gibbs_fn=make_gibbs_fn(data), gibbs_sites=['z'],
 				)
+			if explict_ub is not None:
+				ub += explict_ub(data, t, params_PY=(alpha, sigma))
+
 		y /= repeat
 		plt.plot(t, y, label=f"N={Npoints}", marker='o')
-		plt.plot(t, prior[:T+1], label=f"Prior with N={Npoints}",
+		plt.plot(t, prior[:T+1], label=f"Prior N={Npoints}",
 				color=plt.gca().lines[-1].get_color(), linestyle='dashed')
+		if explict_ub is not None:
+			ub /= repeat
+			plt.plot(t, ub, label=f"Upper bound N={Npoints}",
+					color=plt.gca().lines[-1].get_color(), linestyle='dotted')
+	plt.axhline(y=1, color='black', linewidth=0.3, linestyle='dotted')
+
 	plt.legend()
 	plt.show()
 
@@ -70,7 +80,7 @@ def sample_data_poisson(rng_key: random.PRNGKey, N: int):
 	return data
 
 def main_poisson_DPMM():
-	make_synthetic_experiment(sample_data_poisson, poisson_DPMM, make_poisson_DPMM_gibbs_fn)
+	make_synthetic_experiment(sample_data_poisson, poisson_DPMM, make_poisson_DPMM_gibbs_fn, explict_ub=explicit_upper_bound)
 
 if __name__ == '__main__':
 	#main_gaussian_DPMM()
