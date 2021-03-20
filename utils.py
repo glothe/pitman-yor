@@ -1,5 +1,6 @@
 import jax.numpy as jnp
 
+
 def mix_weights(beta):
     T = beta.shape[-1]
     batched = beta.shape[:-1]
