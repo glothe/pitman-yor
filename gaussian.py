@@ -56,17 +56,16 @@ def multivariate_gaussian_DPMM(data: jnp.ndarray, alpha: float = 1, T: int = 10)
 
 	with numpyro.plate("component_plate", T):
 		mu = numpyro.sample("mu", MultivariateNormal(mu_bar, sigma2_mu * jnp.eye(Ndim)))
-		kappa = numpyro.sample("kappa", Gamma(2, sigma2_mu))
 
-		# TODO prior on component variance
-		sigma2 = numpyro.sample("sigma2", InverseGamma(.5, kappa))
+		# http://pyro.ai/examples/lkj.html
+		with numpyro.plate("dim", Ndim):
+			theta = numpyro.sample("theta", HalfCauchy(1))
+		L_omega = numpyro.sample("L_omega", LKJCholesky(Ndim, 1))
+		L_Omega = jnp.sqrt(theta.T[:,:, None]) * L_omega
 
 	with numpyro.plate("data", Nsamples):
 		z = numpyro.sample("z", Categorical(mix_weights(beta)))
-		
-		loc = mu[z]
-		cov = sigma2[z,None,None] * jnp.eye(Ndim)
-		numpyro.sample("obs", MultivariateNormal(loc, cov), obs=data)
+		numpyro.sample("obs", MultivariateNormal(mu[z], scale_tril=L_Omega[z]), obs=data)
 
 def make_gaussian_DPMM_gibbs_fn(data: jnp.ndarray):
 	Nsamples, = data.shape

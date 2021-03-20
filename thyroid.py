@@ -30,7 +30,7 @@ def plot_posterior(data: np.ndarray):
 	rng_key = random.PRNGKey(0)
 	repeat = 1
 
-	for Npoints in (200, 400, 500):
+	for Npoints in (50,):
 		y = np.zeros(T+1)
 		for _ in range(repeat):
             # TODO: take random subsample for 'repeat' > 1
