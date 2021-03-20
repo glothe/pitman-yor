@@ -32,7 +32,7 @@ def richardson_component_prior(data: jnp.ndarray):
 	return mu_bar, sigma2_mu
 
 def gaussian_DPMM(data: jnp.ndarray, alpha: float = 1, T: int = 10):
-	Nsamples = data.shape
+	Nsamples, = data.shape
 	mu_bar, sigma2_mu = richardson_component_prior(data)
 
 	with numpyro.plate("beta_plate", T-1):
@@ -69,12 +69,12 @@ def multivariate_gaussian_DPMM(data: jnp.ndarray, alpha: float = 1, T: int = 10)
 		numpyro.sample("obs", MultivariateNormal(loc, cov), obs=data)
 
 def make_gaussian_DPMM_gibbs_fn(data: jnp.ndarray):
-	Nsamples, Ndim = data.shape
+	Nsamples, = data.shape
 
 	def gibbs_fn(rng_key: random.PRNGKey, gibbs_sites, hmc_sites):
 		beta = hmc_sites['beta']
 		mu = hmc_sites['mu']
-		sigma2 = hmc_sites['sigma2']
+		sigma2_inv = hmc_sites['sigma2']
 
 		T, = mu.shape
 		assert beta.shape == (T-1,)
@@ -82,7 +82,7 @@ def make_gaussian_DPMM_gibbs_fn(data: jnp.ndarray):
 
 		N, = data.shape
 
-		log_probs = Normal(loc=mu, scale=jnp.sqrt(sigma2_inv) * jnp.eye(Ndim)).log_prob(data[:, None])
+		log_probs = Normal(loc=mu, scale=jnp.sqrt(sigma2_inv)).log_prob(data[:, None])
 		assert log_probs.shape == (N, T)
 
 		log_weights = jnp.log(mix_weights(beta))
