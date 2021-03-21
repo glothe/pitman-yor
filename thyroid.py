@@ -22,7 +22,6 @@ def plot_data(x: np.ndarray, clusters: np.ndarray):
     
     plt.show()
 
-
 def plot_posterior(data: np.ndarray):
 	Nsamples = 1000
 	T = 10
@@ -48,7 +47,24 @@ def plot_posterior(data: np.ndarray):
 	plt.legend()
 	plt.show()
 
+def plot_clusters(data: np.ndarray):
+	T = 10
+	t = np.arange(T + 1)
+	Npoints = 100
+
+	rng_key = random.PRNGKey(0)
+
+	x = data[:Npoints]
+	hist, z = sample_posterior(rng_key, multivariate_gaussian_DPMM, x, Nsamples=1, T=T, alpha=1, return_z=True)
+
+	for c in np.unique(z):
+		xc = x[z == c]
+		plt.scatter(xc[:,4], xc[:, 2], alpha=1)
+
+	plt.show()
+
 
 if __name__ == "__main__":
-    x, clusters = load_data()
-    plot_posterior(x)
+	x, clusters = load_data()
+	# plot_posterior(x)
+	plot_clusters(x)

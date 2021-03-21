@@ -35,7 +35,8 @@ def sample_posterior_with_predictive(
 		data: np.ndarray,
 		Nsamples: int = 1000,
 		alpha: float = 1,
-		T: int = 10):
+		T: int = 10,
+		return_z: bool = False):
 
 	kernel = NUTS(model)
 	mcmc = MCMC(kernel, num_samples=Nsamples, num_warmup=500)
@@ -45,7 +46,13 @@ def sample_posterior_with_predictive(
 
 	predictive = Predictive(model, posterior_samples=samples, return_sites=["z"])
 	z = predictive(rng_key, data)["z"]
-	return compute_n_clusters_distribution(z, T)
+
+	hist = compute_n_clusters_distribution(z, T)
+
+	if return_z:
+		return hist, z
+	else:
+		return hist
 
 def sample_posterior_gibbs(
 		rng_key: random.PRNGKey,
@@ -80,10 +87,19 @@ def sample_posterior(
 		alpha: float = 1,
 		T: int = 10,
 		gibbs_fn=None,
-		gibbs_sites=None):
+		gibbs_sites=None,
+		return_z: bool = False):
+	""" 
+		Sample 'Nsamples' points from the posterior distribution and compute the
+		histogram of cluster size.
+
+		Args:
+			return_z (bool): additionally return the clusters of each point in the data.
+	"""
 
 	if gibbs_fn is None or gibbs_sites is None:
-		return sample_posterior_with_predictive(rng_key, model, data, Nsamples, alpha, T)
+		return sample_posterior_with_predictive(rng_key, model, data, Nsamples, alpha, T,
+			return_z=return_z)
 	else:
 		return sample_posterior_gibbs(rng_key, model, data, Nsamples, alpha, T, gibbs_fn, gibbs_sites)
 
