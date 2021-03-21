@@ -83,5 +83,16 @@ def main_poisson_DPMM():
     make_synthetic_experiment(sample_data_poisson, poisson_DPMM, make_poisson_DPMM_gibbs_fn, explict_ub=explicit_upper_bound)
 
 if __name__ == '__main__':
-    #main_gaussian_DPMM()
-    main_poisson_DPMM()
+    import argparse
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--distribution", type=str, help="Component distribution", default="poisson",
+        choices=["poisson", "gaussian"])
+
+    args = parser.parse_args()
+
+    if args.distribution == "poisson":
+        main_poisson_DPMM()
+    elif args.distribution == "gaussian":
+        main_gaussian_DPMM()
+    else:
+        raise ValueError()
