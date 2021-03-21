@@ -7,7 +7,7 @@ from numpyro.distributions import *
 
 import matplotlib.pyplot as plt
 
-from utils import mix_weights
+from utils import mix_weights, sample_beta_DP, sample_beta_PY
 from sampler import sample_posterior
 
 
@@ -35,8 +35,7 @@ def gaussian_DPMM(data: jnp.ndarray, alpha: float = 1, T: int = 10):
     Nsamples, = data.shape
     mu_bar, sigma2_mu = richardson_component_prior(data)
 
-    with numpyro.plate("beta_plate", T-1):
-        beta = numpyro.sample("beta", Beta(1, alpha))
+    beta = sample_beta_PY(alpha=alpha, T=T)
 
     with numpyro.plate("component_plate", T):
         mu = numpyro.sample("mu", Normal(mu_bar, jnp.sqrt(sigma2_mu)))
@@ -51,8 +50,7 @@ def multivariate_gaussian_DPMM(data: jnp.ndarray, alpha: float = 1, T: int = 10)
     Nsamples, Ndim = data.shape
     mu_bar, sigma2_mu = richardson_component_prior(data)
 
-    with numpyro.plate("beta_plate", T-1):
-        beta = numpyro.sample("beta", Beta(1, alpha))
+    beta = sample_beta_PY(alpha=alpha, T=T)
 
     with numpyro.plate("component_plate", T):
         mu = numpyro.sample("mu", MultivariateNormal(mu_bar, sigma2_mu * jnp.eye(Ndim)))

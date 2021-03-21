@@ -1,6 +1,11 @@
-import jax.numpy as jnp
 import numpy as np
+import jax.numpy as jnp
+
+import numpyro
+from numpyro.distributions import *
+
 from typing import Iterable, List
+
 
 def mix_weights(beta: jnp.ndarray) -> jnp.ndarray:
     T = beta.shape[-1]
@@ -14,6 +19,17 @@ def mix_weights(beta: jnp.ndarray) -> jnp.ndarray:
     assert res.shape == (*batched, T+1)
 
     return res
+
+def sample_beta_DP(alpha: float, T:int = 10):
+    with numpyro.plate("beta_plate", T-1):
+        beta = numpyro.sample("beta", Beta(1, alpha))
+    return beta
+
+def sample_beta_PY(alpha: float, sigma: float = 0, T: int = 10):
+    with numpyro.plate("beta_plate", T-1):
+        beta = numpyro.sample("beta", Beta(1 - sigma, alpha + sigma * jnp.arange(T - 1)))
+    return beta
+
 
 def compute_PY_prior(alpha: float, sigma: float, n_values: Iterable[int]) -> List[np.ndarray]:
     """
