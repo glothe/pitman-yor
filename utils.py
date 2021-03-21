@@ -31,6 +31,43 @@ def sample_beta_PY(alpha: float, sigma: float = 0, T: int = 10):
     return beta
 
 
+def compute_n_clusters_distribution(z: np.ndarray, T: int) -> np.ndarray:
+    """ 
+    Compute the empirical distribution of the number of clusters from sampled data.
+
+    Args:
+        z (np.ndarray(shape=(Nsamples, Npoints), dtype=int)): cluster assignments
+        T (int) : maximum number of cluster
+
+    Returns:
+        Normalized histogram of cluster size (np.ndarray(shape=(T+1), dtype=float)) 
+    """
+
+    Nsamples, _ = z.shape
+    counts = np.zeros(shape=Nsamples, dtype=int) # number of clusters of each sample
+    for i, A in enumerate(z):
+        counts[i] = len(np.unique(A))
+
+    nclusters, cluster_counts = np.unique(counts, return_counts=True)
+
+    y = np.zeros(T+1)
+    y[nclusters] = cluster_counts / np.sum(cluster_counts)
+    return y
+
+def compute_cluster_size_distribution(z: np.ndarray) -> np.ndarray:
+    """ 
+        Compute emipirical cluster sizes.
+    """
+    Nsamples, Npoints = z.shape
+    counts = np.zeros(Npoints + 1)  # number of clusters of size m
+    
+    for i, sample in enumerate(z):
+        clusters, size = np.unique(sample, return_counts=True)
+        np.add.at(counts, size, 1)
+
+    counts /= Nsamples
+    return counts
+
 def compute_PY_prior(alpha: float, sigma: float, n_values: Iterable[int]) -> List[np.ndarray]:
     """
     Compute recursively the distrbution of the number of clusters
