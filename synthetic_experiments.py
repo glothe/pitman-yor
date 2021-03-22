@@ -76,7 +76,7 @@ def make_synthetic_experiment(sample_data, model, make_gibbs_fn, explicit_ub=Non
 
         if explicit_ub is not None:
             upper_bound /= REPEATS
-            ax0.plot(t, upper_bound, label=f"Upper bound N={Npoints}", color=color, linestyle='dotted', lw=1)
+			ax0.plot(t[1:], upper_bound[1:], label=f"Upper bound N={Npoints}", color=color, linestyle='dotted', lw=1)
 
         # Plot cluster size histograms (ax1)
         bins = np.linspace(0, 1, 10, endpoint=True)
@@ -121,7 +121,7 @@ def make_synthetic_experiment_alpha(sample_data, model, make_gibbs_fn, explicit_
         # Upper bound
         if explicit_ub is not None:
             upper_bound = explicit_ub(data, t, params_PY=(alpha, 0))
-            plt.plot(t, upper_bound, label=r"Upper bound $\alpha={}$".format(alpha), color=color,
+			plt.plot(t[1:], upper_bound[1:], label=r"Upper bound $\alpha={}$".format(alpha), color=color,
                      linestyle="dotted", lw=1)
 
         # Prior
@@ -159,7 +159,7 @@ def make_synthetic_experiment_sigma(sample_data, model, make_gibbs_fn, explicit_
         # Upper bound
         if explicit_ub is not None:
             upper_bound = explicit_ub(data, t, params_PY=(1, sigma))
-            plt.plot(t, upper_bound, label=r"Upper bound $\sigma={}$".format(sigma), color=color,
+			plt.plot(t[1:], upper_bound[1:], label=r"Upper bound $\sigma={}$".format(sigma), color=color,
                      linestyle="dotted", lw=1)
 
         # Prior
