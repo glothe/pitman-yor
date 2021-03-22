@@ -7,6 +7,8 @@ from numpyro.distributions import *
 
 import matplotlib.pyplot as plt
 
+from typing import Callable, Dict
+
 from utils import mix_weights, sample_beta_DP, sample_beta_PY
 from sampler import sample_posterior
 
@@ -18,7 +20,7 @@ def richardson_component_prior(data: jnp.ndarray):
     https://people.maths.bris.ac.uk/~mapjg/papers/RichardsonGreenRSSB.pdf, p735
 
     Args:
-        data (jnp.ndarray(shape=(Nsamples, dim))): input data
+        data (jnp.ndarray(shape=(Npoints, dim))): input data
 
     Returns:
         mu_bar (float): prior component mean
@@ -32,7 +34,7 @@ def richardson_component_prior(data: jnp.ndarray):
     return mu_bar, sigma2_mu
 
 def gaussian_DPMM(data: jnp.ndarray, alpha: float = 1, T: int = 10):
-    Nsamples, = data.shape
+    Npoints, = data.shape
     mu_bar, sigma2_mu = richardson_component_prior(data)
 
     beta = sample_beta_PY(alpha=alpha, T=T)
@@ -42,12 +44,12 @@ def gaussian_DPMM(data: jnp.ndarray, alpha: float = 1, T: int = 10):
         kappa = numpyro.sample("kappa", Gamma(2, sigma2_mu))
         sigma2 = numpyro.sample("sigma2", InverseGamma(.5, kappa))
 
-    with numpyro.plate("data", Nsamples):
+    with numpyro.plate("data", Npoints):
         z = numpyro.sample("z", Categorical(mix_weights(beta)))
         numpyro.sample("obs", Normal(mu[z], jnp.sqrt(sigma2[z])), obs=data)
         
 def multivariate_gaussian_DPMM(data: jnp.ndarray, alpha: float = 1, sigma: float = 0, T: int = 10):
-    Nsamples, Ndim = data.shape
+    Npoints, Ndim = data.shape
     mu_bar, sigma2_mu = richardson_component_prior(data)
 
     beta = sample_beta_PY(alpha=alpha, sigma=sigma, T=T)
@@ -61,14 +63,22 @@ def multivariate_gaussian_DPMM(data: jnp.ndarray, alpha: float = 1, sigma: float
         L_omega = numpyro.sample("L_omega", LKJCholesky(Ndim, 1))
         L_Omega = jnp.sqrt(theta.T[:,:, None]) * L_omega
 
-    with numpyro.plate("data", Nsamples):
+    with numpyro.plate("data", Npoints):
         z = numpyro.sample("z", Categorical(mix_weights(beta)))
+
+        assert z.shape == (Npoints,)
+        assert mu.shape == (T, Ndim)
+        assert L_Omega.shape == (T, Ndim, Ndim)
+
         numpyro.sample("obs", MultivariateNormal(mu[z], scale_tril=L_Omega[z]), obs=data)
 
-def make_gaussian_DPMM_gibbs_fn(data: jnp.ndarray):
-    Nsamples, = data.shape
-
-    def gibbs_fn(rng_key: random.PRNGKey, gibbs_sites, hmc_sites):
+def make_gaussian_DPMM_gibbs_fn(data: jnp.ndarray) -> \
+    Callable[[random.PRNGKey, Dict[str, jnp.ndarray], Dict[str, jnp.ndarray]], Dict[str, jnp.ndarray]]:
+    Npoints, = data.shape
+    def gibbs_fn(rng_key: random.PRNGKey,
+                 gibbs_sites: Dict[str, jnp.ndarray],
+                 hmc_sites: Dict[str, jnp.ndarray]
+                 ) -> Dict[str, jnp.ndarray]:
         beta = hmc_sites['beta']
         mu = hmc_sites['mu']
         sigma2_inv = hmc_sites['sigma2']
@@ -77,45 +87,54 @@ def make_gaussian_DPMM_gibbs_fn(data: jnp.ndarray):
         assert beta.shape == (T-1,)
         assert sigma2_inv.shape == (T,)
 
-        N, = data.shape
-
         log_probs = Normal(loc=mu, scale=jnp.sqrt(sigma2_inv)).log_prob(data[:, None])
-        assert log_probs.shape == (N, T)
+        assert log_probs.shape == (Npoints, T)
 
         log_weights = jnp.log(mix_weights(beta))
         assert log_weights.shape == (T,)
 
         logits = log_probs + log_weights[None,:]
-        assert logits.shape == (Nsamples, T)
+        assert logits.shape == (Npoints, T)
 
-        with numpyro.plate("z", Nsamples):
+        with numpyro.plate("z", Npoints):
             z = CategoricalLogits(logits).sample(rng_key)
-            assert z.shape == (Nsamples,)
+            assert z.shape == (Npoints,)
     
         return {'z':z}
     return gibbs_fn
 
-def make_multivariate_gaussian_DPMM_gibbs_fn(data: jnp.ndarray):
-    Nsamples, Ndim = data.shape
-
-    def gibbs_fn(rng_key: random.PRNGKey, gibbs_sites, hmc_sites):
+def make_multivariate_gaussian_DPMM_gibbs_fn(data: jnp.ndarray) -> \
+	Callable[[random.PRNGKey, Dict[str, jnp.ndarray], Dict[str, jnp.ndarray]], Dict[str, jnp.ndarray]]:
+    Npoints, Ndim = data.shape
+    def gibbs_fn(rng_key: random.PRNGKey,
+                 gibbs_sites: Dict[str, jnp.ndarray],
+                 hmc_sites: Dict[str, jnp.ndarray]
+                 ) -> Dict[str, jnp.ndarray]:
         beta = hmc_sites['beta']
         mu = hmc_sites['mu']
-        sigma2 = hmc_sites['sigma2']
-        cov = sigma2[:, None, None] * jnp.eye(Ndim)
+        theta = hmc_sites['theta']
+        L_omega = hmc_sites['L_omega']
+        L_Omega = jnp.sqrt(theta.T[:,:, None]) * L_omega
 
-        print(cov.shape)
+        T, _ = mu.shape
 
-        # TODO not working yet
-        log_probs = MultivariateNormal(mu, cov).log_prob(data[...,None])
-        
-        print(log_probs.shape)
+        assert beta.shape == (T-1,)
+        assert mu.shape == (T, Ndim)
+        assert theta.shape == (Ndim, T)
+        assert L_omega.shape == (T, Ndim, Ndim)
+        assert L_Omega.shape == (T, Ndim, Ndim)
+
+        log_probs = MultivariateNormal(loc=mu, scale_tril=L_Omega).log_prob(data[:, None])
+        assert log_probs.shape == (Npoints, T)
 
         log_weights = jnp.log(mix_weights(beta))
-        logits = log_probs + log_weights[None,:]
+        assert log_weights.shape == (T,)
 
-        with numpyro.plate("z", Nsamples):
+        logits = log_probs + log_weights[None,:]
+        assert logits.shape == (Npoints, T)
+
+        with numpyro.plate("z", Npoints):
             z = CategoricalLogits(logits).sample(rng_key)
-    
+        assert z.shape == (Npoints,)
         return {'z':z}
     return gibbs_fn

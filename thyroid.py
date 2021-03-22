@@ -11,10 +11,10 @@ from utils import compute_n_clusters_distribution
 
 
 N_SAMPLES = 1000
-REPEATS = 1
+REPEATS = 3
 
 
-def load_data(file_name: str = "../data/thyroid_train.dat") -> (np.ndarray, np.ndarray):
+def load_data(file_name: str = "./data/thyroid_train.dat") -> (np.ndarray, np.ndarray):
     x = np.genfromtxt(file_name, usecols=[0, 1, 2, 3, 4, 5], dtype=np.float)
     clusters = np.genfromtxt(file_name, usecols=[6], dtype=np.float).astype(np.int)
     return x, clusters
@@ -46,9 +46,9 @@ def plot_posterior(data: np.ndarray):
             idx = np.random.choice(len(data), size=Npoints, replace=False)
             data_sub = data[idx]
 
-            z = sample_posterior(rng_key, multivariate_gaussian_DPMM, data_sub, N_SAMPLES, T=T, alpha=1, sigma=0
+            z = sample_posterior(rng_key, multivariate_gaussian_DPMM, data_sub, N_SAMPLES, T=T, alpha=1, sigma=0,
                 # Uncomment the line below to use HMCGibbs - not working yet
-                	# gibbs_fn=make_multivariate_gaussian_DPMM_gibbs_fn(data), gibbs_sites=['z'],
+                    gibbs_fn=make_multivariate_gaussian_DPMM_gibbs_fn(data_sub), gibbs_sites=['z'],
                 )
             y = compute_n_clusters_distribution(z, T)
 

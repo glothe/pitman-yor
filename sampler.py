@@ -6,7 +6,7 @@ import numpyro
 from numpyro.infer import Predictive, MCMC, BarkerMH, NUTS, Predictive, HMCGibbs, DiscreteHMCGibbs
 
 
-NUM_WARMUP = 500
+NUM_WARMUP = 1000
 
 
 def sample_posterior_with_predictive(
