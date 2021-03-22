@@ -8,6 +8,7 @@ from jax import random
 from numpyro.distributions import Normal, Poisson
 
 import matplotlib.pyplot as plt
+plt.style.use('seaborn')
 
 from sampler import sample_posterior
 from gaussian import gaussian_DPMM, make_gaussian_DPMM_gibbs_fn
@@ -17,7 +18,7 @@ from utils import compute_PY_prior, compute_n_clusters_distribution, compute_clu
 
 USE_GIBBS = True  # Use HMCGibbs
 N_SAMPLES = 1000
-REPEATS = 1
+REPEATS = 3
 
 
 def make_synthetic_experiment(sample_data, model, make_gibbs_fn, explicit_ub=None):
@@ -32,7 +33,7 @@ def make_synthetic_experiment(sample_data, model, make_gibbs_fn, explicit_ub=Non
     rng_key = random.PRNGKey(0)
 
     # Sampling parameters
-    n_values = [50, 200] # [200 #, 500, 1000, 2000]
+    n_values = [100, 1000, 10000]
 
     # DPMM/PYMM parameters
     T = 20  # max number of component in the truncated stick breaking representation
@@ -76,7 +77,7 @@ def make_synthetic_experiment(sample_data, model, make_gibbs_fn, explicit_ub=Non
 
         if explicit_ub is not None:
             upper_bound /= REPEATS
-			ax0.plot(t[1:], upper_bound[1:], label=f"Upper bound N={Npoints}", color=color, linestyle='dotted', lw=1)
+            ax0.plot(t[1:], upper_bound[1:], label=f"Upper bound N={Npoints}", color=color, linestyle='dotted', lw=1)
 
         # Plot cluster size histograms (ax1)
         bins = np.linspace(0, 1, 10, endpoint=True)
@@ -121,7 +122,7 @@ def make_synthetic_experiment_alpha(sample_data, model, make_gibbs_fn, explicit_
         # Upper bound
         if explicit_ub is not None:
             upper_bound = explicit_ub(data, t, params_PY=(alpha, 0))
-			plt.plot(t[1:], upper_bound[1:], label=r"Upper bound $\alpha={}$".format(alpha), color=color,
+            plt.plot(t[1:], upper_bound[1:], label=r"Upper bound $\alpha={}$".format(alpha), color=color,
                      linestyle="dotted", lw=1)
 
         # Prior
@@ -132,6 +133,7 @@ def make_synthetic_experiment_alpha(sample_data, model, make_gibbs_fn, explicit_
 
     plt.legend()
     plt.title(r"Impact of $\alpha$")
+    plt.ylabel(r"$P(T_n=t|X_{1:N})$")
     plt.xlabel("Number of clusters")
     plt.show()
 
@@ -159,7 +161,7 @@ def make_synthetic_experiment_sigma(sample_data, model, make_gibbs_fn, explicit_
         # Upper bound
         if explicit_ub is not None:
             upper_bound = explicit_ub(data, t, params_PY=(1, sigma))
-			plt.plot(t[1:], upper_bound[1:], label=r"Upper bound $\sigma={}$".format(sigma), color=color,
+            plt.plot(t[1:], upper_bound[1:], label=r"Upper bound $\sigma={}$".format(sigma), color=color,
                      linestyle="dotted", lw=1)
 
         # Prior
@@ -170,6 +172,7 @@ def make_synthetic_experiment_sigma(sample_data, model, make_gibbs_fn, explicit_
 
     plt.legend()
     plt.title(r"Impact of $\sigma$")
+    plt.ylabel(r"$P(T_n=t|X_{1:N})$")
     plt.xlabel("Number of clusters")
     plt.show()
 

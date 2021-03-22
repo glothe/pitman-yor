@@ -33,11 +33,11 @@ def richardson_component_prior(data: jnp.ndarray):
 
     return mu_bar, sigma2_mu
 
-def gaussian_DPMM(data: jnp.ndarray, alpha: float = 1, T: int = 10):
+def gaussian_DPMM(data: jnp.ndarray, alpha: float = 1, sigma: float = 0, T: int = 10):
     Npoints, = data.shape
     mu_bar, sigma2_mu = richardson_component_prior(data)
 
-    beta = sample_beta_PY(alpha=alpha, T=T)
+    beta = sample_beta_PY(alpha=alpha, sigma=sigma, T=T)
 
     with numpyro.plate("component_plate", T):
         mu = numpyro.sample("mu", Normal(mu_bar, jnp.sqrt(sigma2_mu)))
