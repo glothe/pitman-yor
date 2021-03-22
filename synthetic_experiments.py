@@ -24,10 +24,10 @@ def make_synthetic_experiment(sample_data: np.ndarray, model, make_gibbs_fn, exp
     # Sampling parameters
     Nsamples = 1000
     repeat = 1
-    n_values = [100, 200, 500, 1000]  #, [200, 500, 1000, 2000]
+    n_values = [50, 200] # [200 #, 500, 1000, 2000]
 
     # DPMM/PYMM parameters
-    T = 10                # max number of component in the truncated stick breaking representation
+    T = 20  # max number of component in the truncated stick breaking representation
     t = np.arange(T + 1)
     alpha = 1
     sigma = 0
@@ -61,24 +61,28 @@ def make_synthetic_experiment(sample_data: np.ndarray, model, make_gibbs_fn, exp
         cluster_size /= repeat
 
         # Plot cluster count histograms (ax0)
-        ax0.plot(t, cluster_count, label=f"N={Npoints}", marker='o')
+        ax0.plot(t, cluster_count, label=f"N={Npoints}")
 
         color = ax0.lines[-1].get_color()
-        ax0.plot(t, prior[:T+1], label=f"Prior N={Npoints}", color=color, linestyle='dashed')
+        ax0.plot(t, prior[:T+1], label=f"Prior N={Npoints}", color=color, linestyle='dashed', lw=1)
 
         if explict_ub is not None:
             upper_bound /= repeat
-            ax0.plot(t, upper_bound, label=f"Upper bound N={Npoints}", color=color, linestyle='dotted')
+            ax0.plot(t, upper_bound, label=f"Upper bound N={Npoints}", color=color, linestyle='dotted', lw=1)
 
         # Plot cluster size histograms (ax1)
-        frac = np.arange(Npoints + 1) / Npoints
-        ax1.plot(frac, cluster_size, color=color, label=f"N={Npoints}")
+        bins = np.linspace(0, 1, 10, endpoint=True)
+        frac = np.arange(0, Npoints + 1) / Npoints
+
+        # TODO : use an actual histogram ?
+        # Overlaying histograms doesn't really look good.
+        hist, edges = np.histogram(frac, bins, density=True, weights=cluster_size)
+        ax1.plot(0.5 * (edges[1:] + edges[:-1]), hist, color=color, label=f"N={Npoints}")
 
     ax0.axhline(y=1, color='black', linewidth=0.3, linestyle='dotted')
-    ax0.set(title="Number of cluster")
+    ax0.set(title=r"Number of clusters", xlabel="$t$", ylabel=r"$P(T_n=t|X_{1:N})$")
     ax0.legend()
 
-    ax1.axhline(y=1, color='black', linewidth=0.3, linestyle='dotted')
     ax1.set(xlabel="Fraction of total size", title="Size of clusters")
     ax1.legend()
 
