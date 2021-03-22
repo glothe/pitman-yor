@@ -27,7 +27,8 @@ def sample_beta_DP(alpha: float, T:int = 10) -> jnp.ndarray:
 
 def sample_beta_PY(alpha: float, sigma: float = 0, T: int = 10) -> jnp.ndarray:
     with numpyro.plate("beta_plate", T-1):
-        beta = numpyro.sample("beta", Beta(1 - sigma, alpha + sigma * jnp.arange(T - 1)))
+        beta = numpyro.sample("beta", Beta(1 - sigma, alpha + sigma * np.arange(1, T)))
+    assert beta.shape == (T-1,), (beta.shape, T)
 
     return beta
 

@@ -25,7 +25,7 @@ def sample_posterior_with_predictive(
     samples = mcmc.get_samples()
 
     predictive = Predictive(model, posterior_samples=samples, return_sites=["z"])
-    return predictive(rng_key, data)["z"]
+    return predictive(rng_key, data=data, alpha=alpha, sigma=sigma, T=T)["z"]
 
 def sample_posterior_gibbs(
         rng_key: random.PRNGKey,

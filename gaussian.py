@@ -74,13 +74,20 @@ def multivariate_gaussian_DPMM(data: jnp.ndarray, alpha: float = 1, sigma: float
 
 def multivariate_gaussian_DPMM_isotropic(data: jnp.ndarray, alpha: float = 1, sigma: float = 0, T: int = 10):
     Npoints, Ndim = data.shape
+
     mu_bar, sigma2_mu = richardson_component_prior(data)
+    assert mu_bar.shape == (Ndim,)
+    assert isinstance(sigma2_mu, float)
 
     beta = sample_beta_PY(alpha=alpha, sigma=sigma, T=T)
+    assert beta.shape == (T-1,)
 
     with numpyro.plate("component_plate", T):
-        mu = numpyro.sample("mu", MultivariateNormal(mu_bar, sigma2_mu * jnp.eye(Ndim)))
+        mu = numpyro.sample("mu", MultivariateNormal(mu_bar, sigma2_mu*np.eye(Ndim)))
+        assert mu.shape == (T, Ndim), (mu.shape, T, Ndim)
+
         kappa = numpyro.sample("kappa", Gamma(2, sigma2_mu))
+        assert kappa.shape == (T,), (kappa.shape, T)
 
         # This line seems to make everything fail
         sigma2 = numpyro.sample("sigma2_inv", InverseGamma(.5, kappa))
@@ -125,7 +132,7 @@ def make_gaussian_DPMM_gibbs_fn(data: jnp.ndarray) -> \
     return gibbs_fn
 
 def make_multivariate_gaussian_DPMM_gibbs_fn(data: jnp.ndarray) -> \
-	Callable[[random.PRNGKey, Dict[str, jnp.ndarray], Dict[str, jnp.ndarray]], Dict[str, jnp.ndarray]]:
+    Callable[[random.PRNGKey, Dict[str, jnp.ndarray], Dict[str, jnp.ndarray]], Dict[str, jnp.ndarray]]:
     Npoints, Ndim = data.shape
     def gibbs_fn(rng_key: random.PRNGKey,
                  gibbs_sites: Dict[str, jnp.ndarray],
