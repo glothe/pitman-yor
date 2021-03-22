@@ -66,7 +66,6 @@ def multivariate_gaussian_DPMM(data: jnp.ndarray, alpha: float = 1, sigma: float
     with numpyro.plate("data", Npoints):
         z = numpyro.sample("z", Categorical(mix_weights(beta)))
 
-        assert z.shape == (Npoints,)
         assert mu.shape == (T, Ndim)
         assert L_Omega.shape == (T, Ndim, Ndim)
 

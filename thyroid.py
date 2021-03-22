@@ -45,7 +45,7 @@ def plot_posterior(data: np.ndarray):
             idx = np.random.choice(len(data), size=Npoints, replace=False)
             data_sub = data[idx]
 
-            z = sample_posterior(rng_key, multivariate_gaussian_DPMM_isotropic, data_sub, N_SAMPLES, alpha=1, sigma=0, T=T, 
+            z = sample_posterior(rng_key, multivariate_gaussian_DPMM_isotropic, data_sub, N_SAMPLES, alpha=1, sigma=0, T=T,
                 # Uncomment the line below to use HMCGibbs
                     # gibbs_fn=make_multivariate_gaussian_DPMM_gibbs_fn(data_sub), gibbs_sites=['z'],
                 )
