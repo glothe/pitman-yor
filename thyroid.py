@@ -5,13 +5,13 @@ from sklearn.decomposition import PCA
 
 import matplotlib.pyplot as plt
 
-from gaussian import multivariate_gaussian_DPMM, make_multivariate_gaussian_DPMM_gibbs_fn
+from gaussian import multivariate_gaussian_DPMM, make_multivariate_gaussian_DPMM_gibbs_fn, multivariate_gaussian_DPMM_isotropic
 from sampler import sample_posterior
 from utils import compute_n_clusters_distribution
 
 
-N_SAMPLES = 1000
-REPEATS = 3
+N_SAMPLES = 500
+REPEATS = 1
 
 
 def load_data(file_name: str = "./data/thyroid_train.dat") -> (np.ndarray, np.ndarray):
@@ -39,16 +39,15 @@ def plot_posterior(data: np.ndarray):
     T = 20
     t = np.arange(T + 1)
 
-    for Npoints in (100, 500, 1000, 2000):
+    for Npoints in (50,):
         y = np.zeros(T+1)
         for _ in range(REPEATS):
-            # TODO: take random subsample for 'repeat' > 1
             idx = np.random.choice(len(data), size=Npoints, replace=False)
             data_sub = data[idx]
 
-            z = sample_posterior(rng_key, multivariate_gaussian_DPMM, data_sub, N_SAMPLES, T=T, alpha=1, sigma=0,
-                # Uncomment the line below to use HMCGibbs - not working yet
-                    gibbs_fn=make_multivariate_gaussian_DPMM_gibbs_fn(data_sub), gibbs_sites=['z'],
+            z = sample_posterior(rng_key, multivariate_gaussian_DPMM_isotropic, data_sub, N_SAMPLES, alpha=1, sigma=0, T=T, 
+                # Uncomment the line below to use HMCGibbs
+                    # gibbs_fn=make_multivariate_gaussian_DPMM_gibbs_fn(data_sub), gibbs_sites=['z'],
                 )
             y = compute_n_clusters_distribution(z, T)
 

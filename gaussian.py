@@ -72,6 +72,27 @@ def multivariate_gaussian_DPMM(data: jnp.ndarray, alpha: float = 1, sigma: float
 
         numpyro.sample("obs", MultivariateNormal(mu[z], scale_tril=L_Omega[z]), obs=data)
 
+def multivariate_gaussian_DPMM_isotropic(data: jnp.ndarray, alpha: float = 1, sigma: float = 0, T: int = 10):
+    Npoints, Ndim = data.shape
+    mu_bar, sigma2_mu = richardson_component_prior(data)
+
+    beta = sample_beta_PY(alpha=alpha, sigma=sigma, T=T)
+
+    with numpyro.plate("component_plate", T):
+        mu = numpyro.sample("mu", MultivariateNormal(mu_bar, sigma2_mu * jnp.eye(Ndim)))
+        kappa = numpyro.sample("kappa", Gamma(2, sigma2_mu))
+
+        # This line seems to make everything fail
+        sigma2 = numpyro.sample("sigma2_inv", InverseGamma(.5, kappa))
+
+        # variances = sigma2[:, None, None] * jnp.eye(Ndim)
+
+    with numpyro.plate("data", Npoints):
+        z = numpyro.sample("z", Categorical(mix_weights(beta)))
+
+        # TODO use the actual variance here
+        numpyro.sample("obs", MultivariateNormal(mu[z], jnp.eye(Ndim)), obs=data)
+
 def make_gaussian_DPMM_gibbs_fn(data: jnp.ndarray) -> \
     Callable[[random.PRNGKey, Dict[str, jnp.ndarray], Dict[str, jnp.ndarray]], Dict[str, jnp.ndarray]]:
     Npoints, = data.shape
@@ -81,13 +102,13 @@ def make_gaussian_DPMM_gibbs_fn(data: jnp.ndarray) -> \
                  ) -> Dict[str, jnp.ndarray]:
         beta = hmc_sites['beta']
         mu = hmc_sites['mu']
-        sigma2_inv = hmc_sites['sigma2']
+        sigma2 = hmc_sites['sigma2']
 
         T, = mu.shape
         assert beta.shape == (T-1,)
-        assert sigma2_inv.shape == (T,)
+        assert sigma2.shape == (T,)
 
-        log_probs = Normal(loc=mu, scale=jnp.sqrt(sigma2_inv)).log_prob(data[:, None])
+        log_probs = Normal(loc=mu, scale=jnp.sqrt(sigma2)).log_prob(data[:, None])
         assert log_probs.shape == (Npoints, T)
 
         log_weights = jnp.log(mix_weights(beta))

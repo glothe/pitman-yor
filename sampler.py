@@ -6,7 +6,7 @@ import numpyro
 from numpyro.infer import Predictive, MCMC, BarkerMH, NUTS, Predictive, HMCGibbs, DiscreteHMCGibbs
 
 
-NUM_WARMUP = 1000
+NUM_WARMUP = 500
 
 
 def sample_posterior_with_predictive(
@@ -72,10 +72,10 @@ def sample_posterior(
 
     if gibbs_fn is None or gibbs_sites is None:
         return sample_posterior_with_predictive(rng_key, model, data, Nsamples,
-                                                alpha, sigma, T)
+                                                alpha=alpha, sigma=sigma, T=T)
     else:
         return sample_posterior_gibbs(rng_key, model, data, Nsamples,
-                                      alpha, sigma, T,
-                                      gibbs_fn, gibbs_sites)
+                                      alpha=alpha, sigma=sigma, T=T,
+                                      gibbs_fn=gibbs_fn, gibbs_sites=gibbs_sites)
 
 
