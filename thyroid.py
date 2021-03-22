@@ -7,6 +7,7 @@ import matplotlib.pyplot as plt
 
 from gaussian import multivariate_gaussian_DPMM, make_multivariate_gaussian_DPMM_gibbs_fn
 from sampler import sample_posterior
+from utils import compute_n_clusters_distribution
 
 
 N_SAMPLES = 1000
@@ -32,25 +33,27 @@ def plot_data(x: np.ndarray, clusters: np.ndarray):
     plt.show()
 
 def plot_posterior(data: np.ndarray):
-    T = 10
-    t = np.arange(T+1)
     rng_key = random.PRNGKey(0)
-    repeat = 1
 
-    for Npoints in (50,):
+    # PYMM parameters
+    T = 20
+    t = np.arange(T + 1)
+
+    for Npoints in (100, 500, 1000, 2000):
         y = np.zeros(T+1)
-        for _ in range(repeat):
+        for _ in range(REPEATS):
             # TODO: take random subsample for 'repeat' > 1
-            data_sub = np.random.choice(data, size=Npoints, replace=False)
+            idx = np.random.choice(len(data), size=Npoints, replace=False)
+            data_sub = data[idx]
 
-            y += sample_posterior(rng_key, multivariate_gaussian_DPMM, data_sub, Nsamples, T=T, alpha=1,
+            z = sample_posterior(rng_key, multivariate_gaussian_DPMM, data_sub, N_SAMPLES, T=T, alpha=1, sigma=0
                 # Uncomment the line below to use HMCGibbs - not working yet
-                #	gibbs_fn=make_multivariate_gaussian_DPMM_gibbs_fn(data), gibbs_sites=['z'],
+                	# gibbs_fn=make_multivariate_gaussian_DPMM_gibbs_fn(data), gibbs_sites=['z'],
                 )
+            y = compute_n_clusters_distribution(z, T)
 
-        y /= repeat
+        y /= REPEATS
         plt.plot(t, y, label=f"N={Npoints}")
-        plt.scatter(t, y)
 
     plt.legend()
     plt.show()
@@ -79,5 +82,5 @@ if __name__ == "__main__":
     x, clusters = load_data()
 
     # plot_data(x, clusters)
-    # plot_posterior(x)
-    plot_clusters(x)
+    plot_posterior(x)
+    # plot_clusters(x)

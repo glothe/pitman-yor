@@ -46,11 +46,11 @@ def gaussian_DPMM(data: jnp.ndarray, alpha: float = 1, T: int = 10):
         z = numpyro.sample("z", Categorical(mix_weights(beta)))
         numpyro.sample("obs", Normal(mu[z], jnp.sqrt(sigma2[z])), obs=data)
         
-def multivariate_gaussian_DPMM(data: jnp.ndarray, alpha: float = 1, T: int = 10):
+def multivariate_gaussian_DPMM(data: jnp.ndarray, alpha: float = 1, sigma: float = 0, T: int = 10):
     Nsamples, Ndim = data.shape
     mu_bar, sigma2_mu = richardson_component_prior(data)
 
-    beta = sample_beta_PY(alpha=alpha, T=T)
+    beta = sample_beta_PY(alpha=alpha, sigma=sigma, T=T)
 
     with numpyro.plate("component_plate", T):
         mu = numpyro.sample("mu", MultivariateNormal(mu_bar, sigma2_mu * jnp.eye(Ndim)))

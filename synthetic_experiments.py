@@ -101,14 +101,14 @@ def make_synthetic_experiment_alpha(sample_data, model, make_gibbs_fn, explicit_
     rng_key = random.PRNGKey(0)
 
     # Sampling parameters
-    Npoints = 100
+    Npoints = 1000
     data = sample_data(rng_key, Npoints)
 
     # DPMM/PYMM parameters
     T = 20
     t = np.arange(T + 1)
 
-    for alpha in [0.5]: #, 1, 2]:
+    for alpha in [0.5, 1, 2]:
         z = sample_posterior(rng_key, model, data, N_SAMPLES,
                 alpha=alpha, sigma=0, T=T, 
                 gibbs_fn=make_gibbs_fn(data) if USE_GIBBS else None,
@@ -131,7 +131,7 @@ def make_synthetic_experiment_alpha(sample_data, model, make_gibbs_fn, explicit_
         # plt.axvline(alpha*np.log(Npoints), color=color, lw=1, linestyle="dashed")
 
     plt.legend()
-    plt.title("Impact of $\alpha$")
+    plt.title(r"Impact of $\alpha$")
     plt.xlabel("Number of clusters")
     plt.show()
 
@@ -139,7 +139,7 @@ def make_synthetic_experiment_sigma(sample_data, model, make_gibbs_fn, explicit_
     rng_key = random.PRNGKey(0)
 
     # Sampling parameters
-    Npoints = 100
+    Npoints = 1000
     data = sample_data(rng_key, Npoints)
 
     # DPMM/PYMM parameters
@@ -169,7 +169,7 @@ def make_synthetic_experiment_sigma(sample_data, model, make_gibbs_fn, explicit_
         # plt.axvline(alpha*np.log(Npoints), color=color, lw=1, linestyle="dashed")
 
     plt.legend()
-    plt.title("Impact of $\sigma$")
+    plt.title(r"Impact of $\sigma$")
     plt.xlabel("Number of clusters")
     plt.show()
 
@@ -206,6 +206,13 @@ def sample_data_poisson(rng_key: random.PRNGKey, N: int):
     return data
 
 def main_poisson_DPMM():
+    make_synthetic_experiment_alpha(
+        sample_data=sample_data_poisson,
+        model=poisson_DPMM,
+        make_gibbs_fn=make_poisson_DPMM_gibbs_fn,
+        explicit_ub=explicit_upper_bound
+    )
+
     make_synthetic_experiment_sigma(
         sample_data=sample_data_poisson,
         model=poisson_DPMM,
