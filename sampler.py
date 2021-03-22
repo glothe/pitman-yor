@@ -21,7 +21,7 @@ def sample_posterior_with_predictive(
     kernel = NUTS(model)
     mcmc = MCMC(kernel, num_samples=Nsamples, num_warmup=NUM_WARMUP)
 
-    mcmc.run(rng_key, data=data, alpha=alpha, T=T)
+    mcmc.run(rng_key, data=data, alpha=alpha, sigma=sigma, T=T)
     samples = mcmc.get_samples()
 
     predictive = Predictive(model, posterior_samples=samples, return_sites=["z"])
@@ -45,7 +45,7 @@ def sample_posterior_gibbs(
     inner_kernel = NUTS(model)
     kernel = HMCGibbs(inner_kernel, gibbs_fn=gibbs_fn, gibbs_sites=gibbs_sites)
     mcmc = MCMC(kernel, num_samples=Nsamples, num_warmup=NUM_WARMUP)
-    mcmc.run(rng_key, data=data, alpha=alpha, T=T)
+    mcmc.run(rng_key, data=data, alpha=alpha, sigma=sigma, T=T)
     samples = mcmc.get_samples()
 
     z = samples['z']

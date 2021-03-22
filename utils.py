@@ -20,14 +20,15 @@ def mix_weights(beta: jnp.ndarray) -> jnp.ndarray:
 
     return res
 
-def sample_beta_DP(alpha: float, T:int = 10):
+def sample_beta_DP(alpha: float, T:int = 10) -> jnp.ndarray:
     with numpyro.plate("beta_plate", T-1):
         beta = numpyro.sample("beta", Beta(1, alpha))
     return beta
 
-def sample_beta_PY(alpha: float, sigma: float = 0, T: int = 10):
+def sample_beta_PY(alpha: float, sigma: float = 0, T: int = 10) -> jnp.ndarray:
     with numpyro.plate("beta_plate", T-1):
         beta = numpyro.sample("beta", Beta(1 - sigma, alpha + sigma * jnp.arange(T - 1)))
+
     return beta
 
 

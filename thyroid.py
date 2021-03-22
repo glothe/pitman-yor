@@ -41,7 +41,7 @@ def plot_posterior(data: np.ndarray):
         y = np.zeros(T+1)
         for _ in range(repeat):
             # TODO: take random subsample for 'repeat' > 1
-            data_sub = data[:Npoints]
+            data_sub = np.random.choice(data, size=Npoints, replace=False)
 
             y += sample_posterior(rng_key, multivariate_gaussian_DPMM, data_sub, Nsamples, T=T, alpha=1,
                 # Uncomment the line below to use HMCGibbs - not working yet

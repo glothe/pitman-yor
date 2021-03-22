@@ -15,14 +15,19 @@ from poisson import poisson_DPMM, make_poisson_DPMM_gibbs_fn, explicit_upper_bou
 from utils import compute_PY_prior, compute_n_clusters_distribution, compute_cluster_size_distribution
 
 
-USE_GIBBS = False  # Use HMCGibbs
+USE_GIBBS = True  # Use HMCGibbs
 N_SAMPLES = 1000
 REPEATS = 1
 
 
-def make_synthetic_experiment(sample_data: np.ndarray, model, make_gibbs_fn, explict_ub=None):
+def make_synthetic_experiment(sample_data, model, make_gibbs_fn, explicit_ub=None):
     """
-    Template for small synthetic experiments
+    Template for small synthetic experiments with varying size of observed data. 
+
+    Args:
+        sample_data: sampling function
+        model: model function
+
     """
     rng_key = random.PRNGKey(0)
 
@@ -55,8 +60,8 @@ def make_synthetic_experiment(sample_data: np.ndarray, model, make_gibbs_fn, exp
                 )
 
             cluster_count += compute_n_clusters_distribution(z, T)
-            if explict_ub is not None:
-                upper_bound += explict_ub(data, t, params_PY=(alpha, sigma))
+            if explicit_ub is not None:
+                upper_bound += explicit_ub(data, t, params_PY=(alpha, sigma))
 
             cluster_size += compute_cluster_size_distribution(z)
 
@@ -69,7 +74,7 @@ def make_synthetic_experiment(sample_data: np.ndarray, model, make_gibbs_fn, exp
         color = ax0.lines[-1].get_color()
         ax0.plot(t, prior[:T+1], label=f"Prior N={Npoints}", color=color, linestyle='dashed', lw=1)
 
-        if explict_ub is not None:
+        if explicit_ub is not None:
             upper_bound /= REPEATS
             ax0.plot(t, upper_bound, label=f"Upper bound N={Npoints}", color=color, linestyle='dotted', lw=1)
 
@@ -92,6 +97,82 @@ def make_synthetic_experiment(sample_data: np.ndarray, model, make_gibbs_fn, exp
     plt.show()
 
 
+def make_synthetic_experiment_alpha(sample_data, model, make_gibbs_fn, explicit_ub=None):
+    rng_key = random.PRNGKey(0)
+
+    # Sampling parameters
+    Npoints = 100
+    data = sample_data(rng_key, Npoints)
+
+    # DPMM/PYMM parameters
+    T = 20
+    t = np.arange(T + 1)
+
+    for alpha in [0.5]: #, 1, 2]:
+        z = sample_posterior(rng_key, model, data, N_SAMPLES,
+                alpha=alpha, sigma=0, T=T, 
+                gibbs_fn=make_gibbs_fn(data) if USE_GIBBS else None,
+                gibbs_sites=['z'] if USE_GIBBS else None,
+            )
+        cluster_count = compute_n_clusters_distribution(z, T)
+        plt.plot(t, cluster_count, label=r"$\alpha={}$".format(alpha))
+        color = plt.gca().lines[-1].get_color()
+
+        # Upper bound
+        if explicit_ub is not None:
+            upper_bound = explicit_ub(data, t, params_PY=(alpha, 0))
+            plt.plot(t, upper_bound, label=r"Upper bound $\alpha={}$".format(alpha), color=color,
+                     linestyle="dotted", lw=1)
+
+        # Prior
+        prior = compute_PY_prior(alpha, 0, [Npoints])[0]
+        plt.plot(t, prior[:T+1], label=r"Prior $\alpha={}$".format(alpha), color=color,
+                 linestyle="dashed", lw=1)
+        # plt.axvline(alpha*np.log(Npoints), color=color, lw=1, linestyle="dashed")
+
+    plt.legend()
+    plt.title("Impact of $\alpha$")
+    plt.xlabel("Number of clusters")
+    plt.show()
+
+def make_synthetic_experiment_sigma(sample_data, model, make_gibbs_fn, explicit_ub=None):
+    rng_key = random.PRNGKey(0)
+
+    # Sampling parameters
+    Npoints = 100
+    data = sample_data(rng_key, Npoints)
+
+    # DPMM/PYMM parameters
+    T = 20
+    t = np.arange(T + 1)
+
+    for sigma in [0, 0.1, .5]:
+        z = sample_posterior(rng_key, model, data, N_SAMPLES,
+                alpha=1, sigma=sigma, T=T, 
+                gibbs_fn=make_gibbs_fn(data) if USE_GIBBS else None,
+                gibbs_sites=['z'] if USE_GIBBS else None,
+            )
+        cluster_count = compute_n_clusters_distribution(z, T)
+        plt.plot(t, cluster_count, label=r"$\sigma={}$".format(sigma))
+        color = plt.gca().lines[-1].get_color()
+
+        # Upper bound
+        if explicit_ub is not None:
+            upper_bound = explicit_ub(data, t, params_PY=(1, sigma))
+            plt.plot(t, upper_bound, label=r"Upper bound $\sigma={}$".format(sigma), color=color,
+                     linestyle="dotted", lw=1)
+
+        # Prior
+        prior = compute_PY_prior(1, sigma, [Npoints])[0]
+        plt.plot(t, prior[:T+1], label=r"Prior $\sigma={}$".format(sigma), color=color,
+                 linestyle="dashed", lw=1)
+        # plt.axvline(alpha*np.log(Npoints), color=color, lw=1, linestyle="dashed")
+
+    plt.legend()
+    plt.title("Impact of $\sigma$")
+    plt.xlabel("Number of clusters")
+    plt.show()
+
 # Gaussian DPMM experiment
 def sample_data_miller(rng_key: random.PRNGKey, N: int) -> np.ndarray:
     """
@@ -110,7 +191,11 @@ def sample_data_miller(rng_key: random.PRNGKey, N: int) -> np.ndarray:
     return data
 
 def main_gaussian_DPMM():
-    make_synthetic_experiment(sample_data_miller, gaussian_DPMM, make_gaussian_DPMM_gibbs_fn)
+    make_synthetic_experiment(
+        sample_data=sample_data_miller,
+        model=gaussian_DPMM,
+        make_gibbs_fn=make_gaussian_DPMM_gibbs_fn
+    )
 
 # Poisson DPMM experiment
 def sample_data_poisson(rng_key: random.PRNGKey, N: int):
@@ -121,7 +206,12 @@ def sample_data_poisson(rng_key: random.PRNGKey, N: int):
     return data
 
 def main_poisson_DPMM():
-    make_synthetic_experiment(sample_data_poisson, poisson_DPMM, make_poisson_DPMM_gibbs_fn, explict_ub=explicit_upper_bound)
+    make_synthetic_experiment_sigma(
+        sample_data=sample_data_poisson,
+        model=poisson_DPMM,
+        make_gibbs_fn=make_poisson_DPMM_gibbs_fn,
+        explicit_ub=explicit_upper_bound
+    )
 
 if __name__ == '__main__':
     import argparse

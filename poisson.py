@@ -8,12 +8,11 @@ from numpyro.distributions import Beta, Gamma, Categorical, Poisson, Categorical
 
 from typing import Tuple
 
-from utils import mix_weights
+from utils import mix_weights, sample_beta_DP, sample_beta_PY
 
 
-def poisson_DPMM(data: jnp.ndarray, alpha: float = 1, T: int = 10):
-    with numpyro.plate("beta_plate", T-1):
-        beta = numpyro.sample("beta", Beta(1, alpha))
+def poisson_DPMM(data: jnp.ndarray, alpha: float = 1, sigma: float = 0, T: int = 10):
+    beta = sample_beta_PY(alpha, sigma, T)
 
     with numpyro.plate("component_plate", T):
         rate = numpyro.sample("rate", Gamma(1, 1))
