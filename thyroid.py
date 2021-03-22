@@ -4,14 +4,15 @@ from jax import random
 from sklearn.decomposition import PCA
 
 import matplotlib.pyplot as plt
+plt.style.use('seaborn')
 
 from gaussian import multivariate_gaussian_DPMM, make_multivariate_gaussian_DPMM_gibbs_fn, multivariate_gaussian_DPMM_isotropic
 from sampler import sample_posterior
 from utils import compute_n_clusters_distribution
 
 
-N_SAMPLES = 500
-REPEATS = 1
+N_SAMPLES = 1000
+REPEATS = 3
 
 
 def load_data(file_name: str = "./data/thyroid_train.dat") -> (np.ndarray, np.ndarray):
@@ -39,7 +40,7 @@ def plot_posterior(data: np.ndarray):
     T = 20
     t = np.arange(T + 1)
 
-    for Npoints in (50,):
+    for Npoints in (500, 1000, 2000):
         y = np.zeros(T+1)
         for _ in range(REPEATS):
             idx = np.random.choice(len(data), size=Npoints, replace=False)
@@ -53,6 +54,10 @@ def plot_posterior(data: np.ndarray):
 
         y /= REPEATS
         plt.plot(t, y, label=f"N={Npoints}")
+
+    plt.ylabel(r"$P(T_n=t|X_{1:N})$")
+    plt.xlabel("$t$")
+    plt.title("Posterior distribution of the number of clusters")
 
     plt.legend()
     plt.show()
