@@ -1,3 +1,7 @@
+"""
+Investigate data size dependency on synthetic datasets. 
+"""
+
 import numpy as np
 from jax import random
 
@@ -11,8 +15,9 @@ from poisson import poisson_DPMM, make_poisson_DPMM_gibbs_fn, explicit_upper_bou
 from utils import compute_PY_prior, compute_n_clusters_distribution, compute_cluster_size_distribution
 
 
-# Use HMCGibbs
-USE_GIBBS = False
+USE_GIBBS = False  # Use HMCGibbs
+N_SAMPLES = 1000
+REPEATS = 1
 
 
 def make_synthetic_experiment(sample_data: np.ndarray, model, make_gibbs_fn, explict_ub=None):
@@ -22,8 +27,6 @@ def make_synthetic_experiment(sample_data: np.ndarray, model, make_gibbs_fn, exp
     rng_key = random.PRNGKey(0)
 
     # Sampling parameters
-    Nsamples = 1000
-    repeat = 1
     n_values = [50, 200] # [200 #, 500, 1000, 2000]
 
     # DPMM/PYMM parameters
@@ -43,9 +46,9 @@ def make_synthetic_experiment(sample_data: np.ndarray, model, make_gibbs_fn, exp
         cluster_size = np.zeros(Npoints+1)
 
         # Repeat the experiment 
-        for _ in range(repeat):
+        for _ in range(REPEATS):
             data = sample_data(rng_key, Npoints)
-            z = sample_posterior(rng_key, model, data, Nsamples,
+            z = sample_posterior(rng_key, model, data, N_SAMPLES,
                     T=T, alpha=1,
                     gibbs_fn=make_gibbs_fn(data) if USE_GIBBS else None,
                     gibbs_sites=['z'] if USE_GIBBS else None,
@@ -57,8 +60,8 @@ def make_synthetic_experiment(sample_data: np.ndarray, model, make_gibbs_fn, exp
 
             cluster_size += compute_cluster_size_distribution(z)
 
-        cluster_count /= repeat
-        cluster_size /= repeat
+        cluster_count /= REPEATS
+        cluster_size /= REPEATS
 
         # Plot cluster count histograms (ax0)
         ax0.plot(t, cluster_count, label=f"N={Npoints}")
@@ -67,7 +70,7 @@ def make_synthetic_experiment(sample_data: np.ndarray, model, make_gibbs_fn, exp
         ax0.plot(t, prior[:T+1], label=f"Prior N={Npoints}", color=color, linestyle='dashed', lw=1)
 
         if explict_ub is not None:
-            upper_bound /= repeat
+            upper_bound /= REPEATS
             ax0.plot(t, upper_bound, label=f"Upper bound N={Npoints}", color=color, linestyle='dotted', lw=1)
 
         # Plot cluster size histograms (ax1)

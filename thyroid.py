@@ -1,10 +1,16 @@
 import numpy as np
 from jax import random
 
+from sklearn.decomposition import PCA
+
 import matplotlib.pyplot as plt
 
 from gaussian import multivariate_gaussian_DPMM, make_multivariate_gaussian_DPMM_gibbs_fn
 from sampler import sample_posterior
+
+
+N_SAMPLES = 1000
+REPEATS = 1
 
 
 def load_data(file_name: str = "../data/thyroid_train.dat") -> (np.ndarray, np.ndarray):
@@ -14,16 +20,18 @@ def load_data(file_name: str = "../data/thyroid_train.dat") -> (np.ndarray, np.n
 
 def plot_data(x: np.ndarray, clusters: np.ndarray):
     classes = np.unique(clusters)
-    limit = 300
+    limit = 500
+
+    pca = PCA(n_components=2)
+    x_pca = np.ascontiguousarray(pca.fit_transform(x))
 
     for c in classes:
-        xc = x[clusters == c]
-        plt.scatter(xc[:limit, 4], xc[:limit, 2], alpha=.2)
+        xc = x_pca[clusters == c]
+        plt.scatter(xc[:limit, 0], xc[:limit, 1], alpha=.2)
     
     plt.show()
 
 def plot_posterior(data: np.ndarray):
-    Nsamples = 1000
     T = 10
     t = np.arange(T+1)
     rng_key = random.PRNGKey(0)
@@ -55,16 +63,21 @@ def plot_clusters(data: np.ndarray):
     rng_key = random.PRNGKey(0)
 
     x = data[:Npoints]
-    hist, z = sample_posterior(rng_key, multivariate_gaussian_DPMM, x, Nsamples=1, T=T, alpha=1, return_z=True)
+    z = sample_posterior(rng_key, multivariate_gaussian_DPMM, x, Nsamples=1, T=T, alpha=1)
+
+    pca = PCA(n_components=2)
+    x_pca = np.ascontiguousarray(pca.fit_transform(x))
 
     for c in np.unique(z):
-        xc = x[z == c]
-        plt.scatter(xc[:,4], xc[:, 2], alpha=1)
+        xc = x_pca[z == c]
+        plt.scatter(xc[:, 0], xc[:, 1], alpha=.5)
 
     plt.show()
 
 
 if __name__ == "__main__":
     x, clusters = load_data()
+
+    # plot_data(x, clusters)
     # plot_posterior(x)
     plot_clusters(x)

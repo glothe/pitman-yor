@@ -15,6 +15,7 @@ def sample_posterior_with_predictive(
         data: np.ndarray,
         Nsamples: int = 1000,
         alpha: float = 1,
+        sigma: float = 0,
         T: int = 10):
 
     kernel = NUTS(model)
@@ -32,6 +33,7 @@ def sample_posterior_gibbs(
         data: np.ndarray,
         Nsamples: int = 1000,
         alpha: float = 1,
+        sigma: float = 0,
         T: int = 10,
         gibbs_fn=None,
         gibbs_sites=None):
@@ -57,17 +59,23 @@ def sample_posterior(
         data: np.ndarray,
         Nsamples: int = 1000,
         alpha: float = 1,
+        sigma: float = 0,
         T: int = 10,
         gibbs_fn=None,
         gibbs_sites=None):
     """ 
-        Sample 'Nsamples' points from the posterior distribution and compute the
-        histogram of cluster size.
+        Sample 'Nsamples' points from the posterior distribution.
+
+        Returns:
+            z (np.ndarray(shape=(Nsamples, Npoints), dtype=int))
     """
 
     if gibbs_fn is None or gibbs_sites is None:
-        return sample_posterior_with_predictive(rng_key, model, data, Nsamples, alpha, T)
+        return sample_posterior_with_predictive(rng_key, model, data, Nsamples,
+                                                alpha, sigma, T)
     else:
-        return sample_posterior_gibbs(rng_key, model, data, Nsamples, alpha, T, gibbs_fn, gibbs_sites)
+        return sample_posterior_gibbs(rng_key, model, data, Nsamples,
+                                      alpha, sigma, T,
+                                      gibbs_fn, gibbs_sites)
 
 
